@@ -16,7 +16,6 @@
 FROM debian:12-slim AS acme-src
 
 ARG ACME_VERSION=3.1.1
-ARG ACME_SHA256=""
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl \

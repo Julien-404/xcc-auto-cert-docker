@@ -29,7 +29,10 @@ services:
     # It talks to the XCC web UIs (LAN), Cloudflare API (egress), LE ACME (egress).
 
     healthcheck:
-      test: ["CMD-SHELL", "find /data/logs -name '*.log' -mmin -10080 | grep -q . || exit 1"]
+      # Fail if no host log has been touched in the last 10 days. Weekly cron
+      # + pre-check (which logs a skip line) means logs should be refreshed
+      # every ~7 days — 10-day window gives margin against minor cron drift.
+      test: ["CMD-SHELL", "find /data/logs -name '*.log' -mmin -14400 | grep -q . || exit 1"]
       interval: 1h
       timeout: 10s
       retries: 3

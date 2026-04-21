@@ -49,7 +49,6 @@ load_secret() {
 load_secret XCC_USER
 load_secret XCC_PASS
 load_secret CF_Token
-load_secret CF_Account_ID
 
 # ---- Dispatch --------------------------------------------------------------
 cmd="${1:-cron}"
