@@ -2,7 +2,7 @@
 
 ## Project
 
-**xcc-auto-cert-docker** — Automates Let's Encrypt certificate deployment to Lenovo XClarity Controller (XCC) BMCs, packaged as a Docker container. DNS-01 via Cloudflare; cert deployment via the **XCC Web UI's internal JSON API** (reverse-engineered — not Redfish). Runs on any Docker host on the same LAN as the BMCs.
+**xcc-cert-renewer** — Automates Let's Encrypt certificate deployment to Lenovo XClarity Controller (XCC) BMCs, packaged as a Docker container. DNS-01 via Cloudflare; cert deployment via the **XCC Web UI's internal JSON API** (reverse-engineered — not Redfish). Runs on any Docker host on the same LAN as the BMCs.
 
 ## Why Web UI API and not Redfish
 

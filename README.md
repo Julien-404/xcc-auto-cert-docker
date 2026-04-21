@@ -1,4 +1,4 @@
-# xcc-auto-cert-docker
+# xcc-cert-renewer
 
 Automates Let's Encrypt certificate renewal on Lenovo XClarity Controller (XCC) BMCs. Runs as a Docker container on any host with LAN access to the BMCs; checks weekly and renews each certificate when it is within 30 days of expiry.
 
@@ -13,8 +13,8 @@ Deploys certs **directly on each XCC** — no reverse proxy. Works around Lenovo
 ## Quick start
 
 ```bash
-git clone git@github.com:Julien-404/xcc-auto-cert-docker.git
-cd xcc-auto-cert-docker
+git clone git@github.com:Julien-404/xcc-cert-renewer.git
+cd xcc-cert-renewer
 
 # 1. Secrets (see XCC prerequisites below for what XCC_PASS is)
 cp .env.example .env && $EDITOR .env
