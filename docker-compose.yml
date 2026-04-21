@@ -1,0 +1,43 @@
+services:
+  xcc-cert-renewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xcc-cert-renewer:latest
+    container_name: xcc-cert-renewer
+    restart: unless-stopped
+
+    environment:
+      TZ: Europe/Zurich
+      # Schedule: Monday 04:00 local time (supercronic in-process cron).
+      CRON_SCHEDULE: "0 4 * * 1"
+      # Let's Encrypt endpoint. Switch to letsencrypt_test for staging during debug.
+      ACME_SERVER: "${ACME_SERVER:-letsencrypt}"
+      ACME_EMAIL: "${ACME_EMAIL:?Set ACME_EMAIL in .env}"
+      RENEWAL_THRESHOLD_DAYS: "30"
+
+    env_file:
+      - .env
+
+    volumes:
+      # Persistent state: acme.sh account key, cert backups, per-host logs
+      - xcc-cert-data:/data
+      # Read-only: list of XCC FQDNs
+      - ./config:/config:ro
+
+    # No ports published. The container is a pure egress client.
+    # It talks to the XCC web UIs (LAN), Cloudflare API (egress), LE ACME (egress).
+
+    healthcheck:
+      test: ["CMD-SHELL", "find /data/logs -name '*.log' -mmin -10080 | grep -q . || exit 1"]
+      interval: 1h
+      timeout: 10s
+      retries: 3
+      start_period: 2m
+
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  xcc-cert-data:
+    driver: local

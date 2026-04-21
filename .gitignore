@@ -1,0 +1,16 @@
+.env
+secrets/
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+
+# Per-deployment config - copy from .example and edit locally
+config/xcc-hosts.conf
+
+# Debug artefacts captured during development - never commit
+*.har
+*.pdf
+*.pdf:Zone.Identifier
+*-fullchain.pem
+*.csr

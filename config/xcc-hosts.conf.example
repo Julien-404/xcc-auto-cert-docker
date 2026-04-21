@@ -1,0 +1,6 @@
+# Copy to xcc-hosts.conf and list one XCC FQDN per line.
+# Blank lines and '#' comments are ignored.
+# The real xcc-hosts.conf is gitignored.
+
+bmc-01.example.com
+bmc-02.example.com
