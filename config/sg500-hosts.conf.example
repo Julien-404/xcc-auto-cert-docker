@@ -1,0 +1,17 @@
+# Cisco SG500 / SG500XG stacks to auto-renew HTTPS cert for.
+# One FQDN per line. Blank lines and #-comments are ignored.
+#
+# The FQDN must:
+#   - Resolve (public or internal DNS) so acme.sh's DNS-01 challenge can target
+#     the correct zone on Cloudflare.
+#   - Point at the switch's mgmt IP (since the renewer probes :443 for the
+#     pre-check — use an --ip override in code if the FQDN is not routable).
+#
+# SSH access details are set via env (not per-host):
+#   SG500_SSH_USER  (default: claude)
+#   SG500_SSH_KEY   (default: /config/ssh/sg500-key, mount from ./config/ssh/)
+#   SG500_SLOT      (default: 2 — SG500 has only slots 1 and 2)
+#
+# Example:
+# sw-core.int.example.com
+# sw-dmz.int.example.com
