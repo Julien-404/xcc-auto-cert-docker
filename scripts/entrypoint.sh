@@ -2,10 +2,12 @@
 # entrypoint.sh - Docker entrypoint
 #
 # Commands:
-#   cron      (default) - run supercronic in foreground with the configured schedule
-#   once      - run renew-all.sh once and exit
-#   host HOST - renew a single host and exit
-#   shell     - drop to bash for debugging
+#   cron         (default) - run supercronic in foreground with the configured schedule
+#   once         - run renew-all.sh once and exit
+#   host HOST    - renew a single XCC host and exit
+#   sg500 HOST   - renew a single SG500 switch and exit
+#   test-notify  - send a one-shot Telegram test message and exit
+#   shell        - drop to bash for debugging
 
 set -euo pipefail
 
@@ -71,6 +73,16 @@ case "${cmd}" in
             exit 1
         fi
         exec python3 /app/xcc-deploy-cert.py --host "$@"
+        ;;
+    sg500)
+        if [[ $# -lt 1 ]]; then
+            echo "Usage: sg500 <FQDN> [extra args]" >&2
+            exit 1
+        fi
+        exec python3 /app/sg500-deploy-cert.py --host "$@"
+        ;;
+    test-notify)
+        exec /app/notify.sh "✅ ${NOTIFY_SUBJECT:-cert-renewer} test OK — $(date -Is)"
         ;;
     shell)
         exec /bin/bash

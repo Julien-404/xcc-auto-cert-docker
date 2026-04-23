@@ -71,7 +71,7 @@ Environment overrides: `SG500_SSH_USER` (default `claude`), `SG500_SSH_KEY` (def
 
 ## Telegram alerts (optional)
 
-Set `TG_BOT_TOKEN` and `TG_CHAT_ID` in `.env` to be notified on any run that has at least one host fail. Messages are only sent on failure by default; set `TG_NOTIFY_ALWAYS=1` to also receive a success heartbeat — handy to catch silent cron misfires. `NOTIFY_SUBJECT` prefixes the message (default: `cert-renewer`).
+Set `TG_BOT_TOKEN` and `TG_CHAT_ID` in `.env` to be notified on any run where at least one host fails. Messages are only sent on failure by default; set `TG_NOTIFY_ALWAYS=1` to also receive a success heartbeat — handy to catch silent cron misfires. `NOTIFY_SUBJECT` prefixes the message (default: `cert-renewer`).
 
 To get the credentials: create a bot with [@BotFather](https://t.me/BotFather), DM your new bot once from the account you want to alert, then:
 
@@ -111,6 +111,8 @@ If the curl to Telegram itself fails (network, wrong token), the renewer logs a 
 | `docker compose run --rm xcc-cert-renewer once` | Run one pass over every host in both `xcc-hosts.conf` and `sg500-hosts.conf` |
 | `docker exec xcc-cert-renewer /app/xcc-deploy-cert.py --host <FQDN> [--force]` | Run XCC backend against one host |
 | `docker exec xcc-cert-renewer /app/sg500-deploy-cert.py --host <FQDN> [--force]` | Run SG500 backend against one host |
+| `docker exec xcc-cert-renewer /app/notify.sh "hello"` | Send a one-shot Telegram message (validates creds) |
+| `docker compose run --rm xcc-cert-renewer test-notify` | Same as above, via entrypoint dispatch |
 | `docker compose run --rm xcc-cert-renewer shell` | Drop into a debug shell |
 | `docker compose logs -f` | Follow scheduler / renewal logs (supercronic streams to stdout) |
 

@@ -25,26 +25,8 @@ mkdir -p "${LOG_DIR}"
 SUMMARY_DIR="${LOG_DIR}/.summary"
 mkdir -p "${SUMMARY_DIR}"
 
-notify_telegram() {
-    # Best-effort POST to Telegram sendMessage. Never fails the script.
-    local text="$1"
-    if [[ -z "${TG_BOT_TOKEN:-}" || -z "${TG_CHAT_ID:-}" ]]; then
-        return 0
-    fi
-    # Telegram caps text at 4096 chars; truncate with margin.
-    if (( ${#text} > 3900 )); then
-        text="${text:0:3800}"$'\n\n[…truncated]'
-    fi
-    if curl -fsS --max-time 15 -o /dev/null \
-            --data-urlencode "chat_id=${TG_CHAT_ID}" \
-            --data-urlencode "text=${text}" \
-            "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage"; then
-        echo "[notify] telegram sent"
-    else
-        # Do NOT echo curl's output — could leak the token in error messages.
-        echo "[notify] telegram send failed" >&2
-    fi
-}
+# shellcheck source=./notify.sh
+. /app/notify.sh
 
 process_file() {
     local file="$1"
@@ -101,18 +83,18 @@ for t in xcc sg500; do
     [[ -f "${SUMMARY_DIR}/${t}" ]] || continue
     mapfile -t lines < "${SUMMARY_DIR}/${t}"
     # Line 0: ok count, line 1: failed count, lines 2+: failed hosts
-    local_ok="${lines[0]:-0}"
-    local_failed="${lines[1]:-0}"
-    total_ok=$((total_ok + local_ok))
-    total_failed=$((total_failed + local_failed))
-    if (( local_failed > 0 )); then
+    ok_t="${lines[0]:-0}"
+    failed_t="${lines[1]:-0}"
+    total_ok=$((total_ok + ok_t))
+    total_failed=$((total_failed + failed_t))
+    if (( failed_t > 0 )); then
         tg_failed_block+="${t}:"$'\n'
         for ((i=2; i<${#lines[@]}; i++)); do
             tg_failed_block+="  • ${lines[i]}"$'\n'
         done
     fi
-    if (( local_ok > 0 )); then
-        tg_ok_block+="${t}: ${local_ok} host(s) OK"$'\n'
+    if (( ok_t > 0 )); then
+        tg_ok_block+="${t}: ${ok_t} host(s) OK"$'\n'
     fi
 done
 
@@ -124,7 +106,8 @@ Run: ${run_ts}
 Failed: ${total_failed} / $((total_ok + total_failed))
 
 ${tg_failed_block}
-${tg_ok_block}Logs: docker logs xcc-cert-renewer"
+${tg_ok_block}
+Logs: docker logs xcc-cert-renewer"
     exit 1
 fi
 

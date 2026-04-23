@@ -88,9 +88,10 @@ COPY --from=supercronic-src /usr/local/bin/supercronic /usr/local/bin/supercroni
 WORKDIR /app
 COPY scripts/xcc-deploy-cert.py   /app/xcc-deploy-cert.py
 COPY scripts/sg500-deploy-cert.py /app/sg500-deploy-cert.py
+COPY scripts/notify.sh            /app/notify.sh
 COPY scripts/renew-all.sh         /app/renew-all.sh
 COPY scripts/entrypoint.sh        /usr/local/bin/entrypoint
-RUN chmod +x /app/xcc-deploy-cert.py /app/sg500-deploy-cert.py /app/renew-all.sh /usr/local/bin/entrypoint
+RUN chmod +x /app/xcc-deploy-cert.py /app/sg500-deploy-cert.py /app/notify.sh /app/renew-all.sh /usr/local/bin/entrypoint
 
 # Create non-root user
 RUN groupadd --system --gid 1000 acme \
