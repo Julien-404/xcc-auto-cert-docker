@@ -3,6 +3,9 @@
 #
 # Called by supercronic cron, or manually via `docker compose run --rm ... once`.
 # Exits 0 only if every host succeeded or was skipped.
+#
+# Optional Telegram alerting: if TG_BOT_TOKEN and TG_CHAT_ID are set, a message
+# is sent on failure (and on success if TG_NOTIFY_ALWAYS=1).
 
 set -euo pipefail
 
@@ -11,13 +14,37 @@ SG500_HOSTS_FILE="${SG500_HOSTS_FILE:-/config/sg500-hosts.conf}"
 LOG_DIR="${LOG_DIR:-/data/logs}"
 XCC_SCRIPT="/app/xcc-deploy-cert.py"
 SG500_SCRIPT="/app/sg500-deploy-cert.py"
+NOTIFY_SUBJECT="${NOTIFY_SUBJECT:-cert-renewer}"
 
 mkdir -p "${LOG_DIR}"
 
 # Summary sentinel files live under the log dir (persistent volume) so we can
 # read them back after both process_file invocations.
+# Format per file, one value per line: ok_count, failed_count, then one line
+# per failed host ("FQDN (rc=N)").
 SUMMARY_DIR="${LOG_DIR}/.summary"
 mkdir -p "${SUMMARY_DIR}"
+
+notify_telegram() {
+    # Best-effort POST to Telegram sendMessage. Never fails the script.
+    local text="$1"
+    if [[ -z "${TG_BOT_TOKEN:-}" || -z "${TG_CHAT_ID:-}" ]]; then
+        return 0
+    fi
+    # Telegram caps text at 4096 chars; truncate with margin.
+    if (( ${#text} > 3900 )); then
+        text="${text:0:3800}"$'\n\n[…truncated]'
+    fi
+    if curl -fsS --max-time 15 -o /dev/null \
+            --data-urlencode "chat_id=${TG_CHAT_ID}" \
+            --data-urlencode "text=${text}" \
+            "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage"; then
+        echo "[notify] telegram sent"
+    else
+        # Do NOT echo curl's output — could leak the token in error messages.
+        echo "[notify] telegram send failed" >&2
+    fi
+}
 
 process_file() {
     local file="$1"
@@ -56,24 +83,57 @@ process_file() {
 
     printf '[%s] SUMMARY ok=%d failed=%d\n' "${label}" "${ok}" "${#failed[@]}"
     for f in "${failed[@]}"; do printf '  - %s\n' "${f}"; done
-    printf '%d\n%d\n' "${ok}" "${#failed[@]}" > "${SUMMARY_DIR}/${label}"
+    {
+        printf '%d\n%d\n' "${ok}" "${#failed[@]}"
+        for f in "${failed[@]}"; do printf '%s\n' "${f}"; done
+    } > "${SUMMARY_DIR}/${label}"
 }
 
 process_file "${XCC_HOSTS_FILE}"   "xcc"   "${XCC_SCRIPT}"
 process_file "${SG500_HOSTS_FILE}" "sg500" "${SG500_SCRIPT}"
 
+total_ok=0
 total_failed=0
+# Body sections for an eventual Telegram notification.
+tg_failed_block=""
+tg_ok_block=""
 for t in xcc sg500; do
-    if [[ -f "${SUMMARY_DIR}/${t}" ]]; then
-        # Line 1: ok count, line 2: failed count
-        mapfile -t counts < "${SUMMARY_DIR}/${t}"
-        total_failed=$((total_failed + counts[1]))
+    [[ -f "${SUMMARY_DIR}/${t}" ]] || continue
+    mapfile -t lines < "${SUMMARY_DIR}/${t}"
+    # Line 0: ok count, line 1: failed count, lines 2+: failed hosts
+    local_ok="${lines[0]:-0}"
+    local_failed="${lines[1]:-0}"
+    total_ok=$((total_ok + local_ok))
+    total_failed=$((total_failed + local_failed))
+    if (( local_failed > 0 )); then
+        tg_failed_block+="${t}:"$'\n'
+        for ((i=2; i<${#lines[@]}; i++)); do
+            tg_failed_block+="  • ${lines[i]}"$'\n'
+        done
+    fi
+    if (( local_ok > 0 )); then
+        tg_ok_block+="${t}: ${local_ok} host(s) OK"$'\n'
     fi
 done
 
+run_ts="$(date -Is)"
 if (( total_failed > 0 )); then
     echo "=== GLOBAL SUMMARY: ${total_failed} host(s) failed ===" >&2
+    notify_telegram "🚨 ${NOTIFY_SUBJECT} FAILED
+Run: ${run_ts}
+Failed: ${total_failed} / $((total_ok + total_failed))
+
+${tg_failed_block}
+${tg_ok_block}Logs: docker logs xcc-cert-renewer"
     exit 1
 fi
+
 echo "=== GLOBAL SUMMARY: all hosts OK ==="
+if [[ "${TG_NOTIFY_ALWAYS:-0}" == "1" ]]; then
+    notify_telegram "✅ ${NOTIFY_SUBJECT} OK
+Run: ${run_ts}
+All ${total_ok} host(s) processed successfully.
+
+${tg_ok_block}"
+fi
 exit 0

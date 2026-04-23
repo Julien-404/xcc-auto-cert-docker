@@ -69,6 +69,34 @@ No "first manual activation" dance needed — the renewer populates slot 2 and b
 
 Environment overrides: `SG500_SSH_USER` (default `claude`), `SG500_SSH_KEY` (default `/config/ssh/sg500-key`), `SG500_SLOT` (default 2 — only 1 and 2 exist on SG500).
 
+## Telegram alerts (optional)
+
+Set `TG_BOT_TOKEN` and `TG_CHAT_ID` in `.env` to be notified on any run that has at least one host fail. Messages are only sent on failure by default; set `TG_NOTIFY_ALWAYS=1` to also receive a success heartbeat — handy to catch silent cron misfires. `NOTIFY_SUBJECT` prefixes the message (default: `cert-renewer`).
+
+To get the credentials: create a bot with [@BotFather](https://t.me/BotFather), DM your new bot once from the account you want to alert, then:
+
+```bash
+curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" | jq '.result[0].message.chat.id'
+```
+
+The bot posts failures as plain text (no markdown escaping issues) with a compact summary:
+
+```
+🚨 cert-renewer FAILED
+Run: 2026-04-23T22:30:00+02:00
+Failed: 2 / 4
+
+xcc:
+  • xcc-pve-01.int.example.com (rc=1)
+sg500:
+  • sw-core.int.example.com (rc=3)
+
+xcc: 2 host(s) OK
+Logs: docker logs xcc-cert-renewer
+```
+
+If the curl to Telegram itself fails (network, wrong token), the renewer logs a line but never fails the run because of it.
+
 ## DNS requirements
 
 - FQDNs can resolve via **internal DNS only** — they don't need to be in the public zone.
